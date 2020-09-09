@@ -80,7 +80,16 @@ summary(model_2)
 stargazer(model, type = "html", out = "model.html")
 stargazer(model_2, type = "html", out = "model_2.html")
 
+models <- list()
 
+models <- list()
+models[['Baseline Model']] <- polr(formula = trumpapp_2019_factor ~ econtrend_2019 + 
+                                     policy3_2019 + policy6_2019, data = df_vsg_2019)
+models[['Specified Self Description']] <- polr(formula = trumpapp_2019_factor ~ econtrend_2019 + 
+                                                 policy3_2019 + policy6_2019 + selfdescr_ccap_7_baseline, 
+                                               data = df_vsg_2019)
+
+msummary(models, output = 'table.docx')
 # ALL EXPLANATORY VARIABLES ARE SIGNIFICANT
 # EACH COEFFICICENT CAN BE INTERPRETED AS THE ODDS OF INCREASING FROM ONE LEVEL
 # TO THE NEXT, IN THIS CASE, LOWERING A LEVEL OF TRUMP'S APPROVAL, BY A FACTOR

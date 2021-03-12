@@ -1,0 +1,188 @@
+---
+title: "pulse_survey"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# 
+# pulse_survey <- read_csv("pulse2021_puf_24.csv")
+# 
+# pulse_weights <- read_csv("pulse2021_puf_24.csv")
+
+
+library(tidyverse)
+library(usmap)
+
+```
+
+## Some cleaning
+
+
+
+```{r}
+head(pulse_weights)
+
+
+sum(pulse_weights$INCOME)
+
+pulse_weights$SCRAM
+
+pulse_survey$SCRAM
+
+pulse_survey$INCOME
+
+
+pulse_survey_weighted <- left_join(pulse_survey, pulse_weights, 
+                                   by = c("SCRAM" = "SCRAM"))
+
+head(pulse_survey_weighted)
+
+pulse_survey_weighted$EXPCTLOSS.x
+
+
+exp_loss_subset <- pulse_survey_weighted %>% 
+  dplyr::select(c(SCRAM, EST_ST.x, EXPCTLOSS.x, EXPCTLOSS.y))
+
+exp_loss_subset
+
+head(exp_loss_subset)
+
+
+pulse_weights$w_exp_loss <- pulse_weights$EXPCTLOSS * pulse_weights$PWEIGHT
+
+pulse_weights$w_exp_loss
+
+exp_loss_subset <- pulse_weights %>% 
+  dplyr::select(c(SCRAM, EST_ST, EXPCTLOSS, PWEIGHT))
+
+# PWEIGHT == person weight, HWEIGHT == household weight
+
+exp_loss_subset_oh <- exp_loss_subset %>% 
+  filter(EST_ST == 39)
+
+
+
+exp_loss_subset_oh
+
+exp_loss_subset_oh %>% 
+  group_by(EXPCTLOSS) %>% 
+  summarise(weight = sum(PWEIGHT))
+
+
+
+```
+
+
+
+
+
+## Make the above a function
+
+You can also embed plots, for example:
+
+```{r}
+
+
+f_pct <- function(state_function){
+  st_filt <- pulse_weights %>% 
+    filter(EST_ST == state_function)
+  
+  exp_l <- st_filt %>% 
+    group_by(EXPCTLOSS) %>% 
+    summarise(weight_func = sum(PWEIGHT))
+  
+  pct_calc <- exp_l$weight_func[2]/
+  (exp_l$weight_func[1]+exp_l$weight_func[3]+exp_l$weight_func[2])
+
+#  pcdf <- data.frame(state_function, pct_calc)
+  return(pct_calc)
+}
+
+f_pct(20)
+
+statevector <- sort(unique(pulse_weights$EST_ST))
+
+
+statevector
+
+
+statevector_df <- data.frame(as.numeric(statevector))
+
+statevector_df <- statevector_df %>% 
+  mutate(row_id = row_number())
+
+statevector_df
+
+
+state_list <- map(statevector, f_pct)
+
+state_list
+
+state_list_binded <- do.call("rbind", state_list)
+
+state_list_binded <- as.data.frame(state_list_binded)
+
+state_list_binded <- state_list_binded %>% 
+  mutate(row_id = row_number())
+
+state_list_binded
+
+
+final_df <- left_join(state_list_binded, statevector_df,
+                      by = c("row_id" = "row_id"))
+
+
+final_df
+
+```
+
+
+
+## Now easy map to build
+```{r}
+
+final_df$as.numeric.statevector.
+
+
+final_df <- rename(final_df, FIPS=as.numeric.statevector.)
+
+final_df <- rename(final_df, value = V1)
+
+final_df <- final_df %>% 
+  dplyr::select(c(value, FIPS))
+
+final_df
+
+final_df$FIPS <- as.character(final_df$FIPS )
+final_df
+
+final_df$FIPS[1] <- "01"
+final_df$FIPS[2] <- "02"
+final_df$FIPS[3] <- "04"
+final_df$FIPS[4] <- "05"
+final_df$FIPS[5] <- "06"
+final_df$FIPS[6] <- "08"
+final_df$FIPS[7] <- "09"
+
+final_df <-  rename(final_df, fips=FIPS)
+
+final_df <- final_df %>% 
+  filter(fips != "11")
+
+final_df$value
+
+final_df <- final_df[,c(2, 1)]
+  
+final_df
+
+
+
+ggplot(final_df, aes(x = reorder(fips, -value) , y = value)) +
+  geom_col() +
+  labs(x = "State FIPS Code", y = "% Who Expect Household Job Loss") +
+  theme_minimal()
+
+
+
+```
